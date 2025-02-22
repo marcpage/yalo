@@ -23,7 +23,7 @@ public:
 
 static bool testLevel(yalo::Level level) {
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(level);
+    yalo::Logger::resetLevels(level);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -53,7 +53,7 @@ static bool testLevel(yalo::Level level) {
 template<typename T>
 static bool testType(const std::string& typeName) {
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -75,7 +75,7 @@ static bool testType(const std::string& typeName) {
 
 static bool testPointer() {
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -99,7 +99,7 @@ static bool testTraceIf() {
     bool success = true;
 
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Trace);
+    yalo::Logger::resetLevels(yalo::Trace);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -123,7 +123,7 @@ static bool testTraceIf() {
 static bool testTraceWhile() {
     int increment = 0;
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Trace);
+    yalo::Logger::resetLevels(yalo::Trace);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -151,7 +151,7 @@ static bool testSwitch(const std::string& typeName) {
     bool success = true;
 
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Trace);
+    yalo::Logger::resetLevels(yalo::Trace);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -183,7 +183,7 @@ static bool testBadLogFile() {
     bool success = true;
 
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -209,7 +209,7 @@ static bool testLogFile() {
     std::string contents;
 
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
     yalo::Logger::addSink(std::unique_ptr<yalo::FileSink>(new yalo::FileSink("bin/testLogFile.txt")));
@@ -245,7 +245,7 @@ static bool testLogFile() {
 
 static bool testException() {
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
     yalo::Logger::addSink(std::unique_ptr<yalo::FileSink>(new yalo::FileSink("bin/testLogFile.txt")));
@@ -271,7 +271,7 @@ static bool testException() {
 
 static bool testLoggerExcpetion() {
     yalo::Logger::clearSinks();
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
     yalo::Logger::addSink(std::unique_ptr<ThrowingSink>(new ThrowingSink()));
@@ -294,7 +294,7 @@ static bool testLoggerExcpetion() {
 static bool testPadding() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterPad);
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -316,7 +316,7 @@ static bool testPadding() {
 static bool testNoPadding() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterAsIs);
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -344,7 +344,7 @@ static void thread_logging(int identifier) {
 static bool testThreading() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterAsIs);
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
@@ -386,7 +386,7 @@ static bool testFormatGMT() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterAsIs);
     yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));
-    yalo::Logger::setLevel(yalo::Log);
+    yalo::Logger::resetLevels(yalo::Log);
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 

@@ -12,6 +12,7 @@
 #include <cerrno>
 #include <type_traits>
 #include <string.h>
+#include <map>
 
 #define lLog yalo::Logger(yalo::Log, __FILE__, __LINE__, __func__)
 #define lErr yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__)
@@ -57,8 +58,9 @@ public:
     static void addSink(ISinkPtr method);
     static void clearSinks();
     static void setFormat(IFormatterPtr formatter);
-    static void setLevel(Level level);
-    static bool shown(Level level);
+    static void setLevel(Level level, const std::string& pattern="");
+    static void resetLevels(Level level);
+    static bool shown(Level level, const std::string& file="");
     static void setInserterSpacing(InserterSpacing spacing);
 
     Logger(Level level, const char* file=nullptr, const int line=0, const char* function=nullptr);
@@ -84,6 +86,7 @@ public:
     typedef std::vector<std::thread::id> ThreadList;
     typedef std::lock_guard<std::mutex> Lock;
     typedef std::vector<ISinkPtr> SinkList;
+    typedef std::map<Level, std::string> FileLevels;
 
     const Level levelRequested;
     const char* file;
@@ -92,15 +95,16 @@ public:
 
 private:
     std::string _stream;
-    enum Mutex {ThreadListMutex, SinkListMutex, FormatterMutex};
+    enum Mutex {ThreadListMutex, SinkListMutex, FormatterMutex, LevelsMutex};
     enum Action {Change, NoChange};
     static std::mutex& _mutex(Mutex mutexType);
     static size_t _thread_index();
-    static Level _level(Level level, Action action=Change);
+    static FileLevels& _levels_needs_lock(); // must Lock(_mutex(LevelsMutex))
     static SinkList& _sinks_needs_lock(); // must Lock(_muetx(SinkListMutex))
     static IFormatterPtr& _formatter(IFormatterPtr update);
     static IFormatterPtr& _formatter();
     static InserterSpacing _spacing(InserterSpacing spacing, Action action=Change);
+    static bool _file_matches(const std::string& file, const std::string& pattern);
     Logger& _append(const std::string& value);
 };
 
@@ -180,14 +184,59 @@ inline void Logger::setFormat(IFormatterPtr formatter) {
     _formatter(std::move(formatter));
 }
 
-inline void Logger::setLevel(Level level) {
-    _level(level);
+inline void Logger::setLevel(Level level, const std::string& pattern) {
+    /*
+        If you set Error, "" then all files will be shown for Error or Log
+        Any levels higher than Error and have "" set, will be cleared.
+        To clear, the higher levels *must* match the pattern exactly
+    */
+    Lock lock(_mutex(LevelsMutex));
+    auto& levels = _levels_needs_lock();
+    const auto start = static_cast<int>(level);
+    const auto max = static_cast<int>(Trace);
+
+    levels[level] = pattern;
+
+    for (int index = start; index <= max; ++index) {
+        const auto lvl = static_cast<Level>(index);
+
+        if (pattern == levels[lvl]) {
+            levels.erase(lvl);
+        }
+    }
 }
 
-inline bool Logger::shown(Level level) {
-    const auto current = _level(level, NoChange);
+inline void Logger::resetLevels(Level level) {
+    Lock lock(_mutex(LevelsMutex));
+    auto& levels = _levels_needs_lock();
 
-    return level <= current;
+    levels.clear();
+    levels[level] = "";
+}
+
+inline bool Logger::shown(Level loggedLevel, const std::string& file) {
+    /*
+        If the file has been set to the requested loggedLevel or higher,
+        it can be logged.
+    */
+    Lock lock(_mutex(LevelsMutex));
+    auto& levels = _levels_needs_lock();
+    const auto start = static_cast<int>(loggedLevel);
+    const auto max = static_cast<int>(Trace);
+
+    for (int index = start; index <= max; ++index) {
+        const auto level = static_cast<Level>(index);
+        const auto found = levels.find(level);
+
+        if (found == levels.end()) {
+            continue; // nothing authorized for this level
+        }
+
+        if (_file_matches(file, found->second)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 inline void Logger::setInserterSpacing(InserterSpacing spacing) {
@@ -210,7 +259,7 @@ inline Logger::~Logger() {
 }
 
 inline Logger& Logger::log_line(const std::string& logLine) {
-    if (!shown(levelRequested)) {
+    if (!shown(levelRequested, file)) {
         return *this;
     }
 
@@ -218,7 +267,7 @@ inline Logger& Logger::log_line(const std::string& logLine) {
     typedef std::vector<ExceptionLogger> ExceptionList;
     ExceptionList failed_sinks;
     Lock lock(_mutex(SinkListMutex));
-    SinkList& sinks = _sinks_needs_lock();
+    auto& sinks = _sinks_needs_lock();
     const auto formatted_line = _formatter()->format(logLine, _thread_index(), *this);
 
     if (sinks.empty()) {
@@ -311,6 +360,7 @@ inline std::mutex& Logger::_mutex(Mutex mutexType) {
     static std::mutex sinkList;
     static std::mutex threadList;
     static std::mutex formatterMutex;
+    static std::mutex levelsMutex;
 
     switch(mutexType) {
         case ThreadListMutex:
@@ -319,6 +369,8 @@ inline std::mutex& Logger::_mutex(Mutex mutexType) {
             return sinkList;
         case FormatterMutex:
             return formatterMutex;
+        case LevelsMutex:
+            return levelsMutex;
         default:
             throw std::invalid_argument("mutexType is invalid: " 
                 + std::to_string(static_cast<int>(mutexType)));
@@ -339,14 +391,14 @@ inline size_t Logger::_thread_index() {
     return static_cast<size_t>(found - threads.begin());
 }
 
-inline Level Logger::_level(Level next, Action action) {
-    static Level level=Error;
-
-    if (Change == action) {
-        level = next;
+inline Logger::FileLevels& Logger::_levels_needs_lock() {
+    static FileLevels levels;
+    
+    if (levels.size() == 0) {
+        levels[Error] = "";
     }
 
-    return level;
+    return levels;
 }
 
 inline Logger::SinkList& Logger::_sinks_needs_lock() {
@@ -389,6 +441,42 @@ inline Logger::InserterSpacing Logger::_spacing(InserterSpacing next, Action act
     }
 
     return spacing;
+}
+
+inline bool Logger::_file_matches(const std::string& file, const std::string& pattern) {
+    /*
+        Rules:
+        1. No files matches a pattern of "-"
+        2. Any file matches an empty pattern (including an empty file)
+        3. All positive patterns are ORed and all negative patterns are ANDed
+
+        Example:
+        - "-" match nothing
+        - "" match everything
+        - "-bin/" match everything except files that contain "bin/"
+        - "src/;-src/include/" match everything that contains "src/" 
+                                unless it contains "src/include/"
+        - ".h;.cpp;-main.cpp;-test.cpp" match all files that have ".h" or ".cpp" in them
+                                            but don't match any that contain "main.cpp"
+                                                or "test.cpp"
+    */
+    // printf("_file_matches('%s', '%s')\n", file.c_str(), pattern.c_str());
+    size_t start = 0;
+    auto good = true;
+
+    while (start < pattern.size()) {
+        const auto end = pattern.find(';', start);
+        const auto part = pattern.substr(start, end-start);
+        const auto negative = part.find('-') == 0;
+        const auto name = part.substr(negative ? 1 : 0);
+        const auto matches = file.find(name) != std::string::npos;
+        
+        if (matches) {
+            good = !negative;
+        }
+    }
+    // printf("_file_matches -> %s\n", good ? "true" : "false");
+    return good;
 }
 
 inline StreamSink::StreamSink(FILE* stream, const std::string& name, CloseAction action) 
