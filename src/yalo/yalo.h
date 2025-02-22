@@ -61,6 +61,8 @@ public:
     static void setInserterSpacing(InserterSpacing spacing);
 
     Logger(Level level, const char* file=nullptr, const int line=0, const char* function=nullptr);
+    Logger(const Logger&) = delete;
+    Logger& operator=(const Logger&) = delete;
     ~Logger();
 
     Logger& log_line(const std::string& line);
@@ -124,6 +126,8 @@ class StreamSink : public ISink {
 public:
     enum CloseAction {AutoClose, DoNotClose};
     StreamSink(FILE* stream, const std::string& name, CloseAction action=AutoClose);
+    StreamSink(const StreamSink&) = delete;
+    StreamSink& operator=(const StreamSink&) = delete;
     virtual ~StreamSink();
 
     virtual void log(const std::string& line) override;
@@ -189,8 +193,8 @@ inline void Logger::setInserterSpacing(InserterSpacing spacing) {
     _spacing(spacing);
 }
 
-inline Logger::Logger(Level level, const char* file, const int line, const char* function)
-    :levelRequested(level), file(file), line(line), function(function), _stream() {}
+inline Logger::Logger(Level level, const char* fl, const int ln, const char* func)
+    :levelRequested(level), file(fl), line(ln), function(func), _stream() {}
 
 inline Logger::~Logger() {
     if (_stream.empty()) {
