@@ -393,7 +393,7 @@ inline size_t Logger::_thread_index() {
 
 inline Logger::FileLevels& Logger::_levels_needs_lock() {
     static FileLevels levels;
-    
+
     if (levels.size() == 0) {
         levels[Error] = "";
     }
@@ -460,7 +460,6 @@ inline bool Logger::_file_matches(const std::string& file, const std::string& pa
                                             but don't match any that contain "main.cpp"
                                                 or "test.cpp"
     */
-    // printf("_file_matches('%s', '%s')\n", file.c_str(), pattern.c_str());
     size_t start = 0;
     auto good = true;
 
@@ -475,7 +474,7 @@ inline bool Logger::_file_matches(const std::string& file, const std::string& pa
             good = !negative;
         }
     }
-    // printf("_file_matches -> %s\n", good ? "true" : "false");
+
     return good;
 }
 

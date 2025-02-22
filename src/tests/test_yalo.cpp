@@ -406,6 +406,54 @@ static bool testFormatGMT() {
     return success;
 }
 
+static bool testFilePattern() {
+    yalo::Logger::clearSinks();
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));
+    yalo::Logger::resetLevels(yalo::Log);
+    std::string log;
+    yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
+    yalo::Logger::setLevel(yalo::Verbose, "test_yalo.cpp");
+
+    lDebug << "testing";
+
+    yalo::Logger::clearSinks();
+    yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter()));
+
+    const auto success = log.find("testing") != std::string::npos;
+
+    if (!success) {
+        fprintf(stderr, "FAIL: testFilePatterns()\n");
+        fprintf(stderr, "[%s]\n", log.c_str());
+    }
+
+    return success;
+}
+
+static bool testFileNoPattern() {
+    yalo::Logger::clearSinks();
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));
+    yalo::Logger::resetLevels(yalo::Log);
+    std::string log;
+    yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
+    yalo::Logger::setLevel(yalo::Verbose, "-test_yalo.cpp");
+    yalo::Logger::setLevel(yalo::Info, "test_yalo.cpp");
+
+    lDebug << "testing";
+
+    yalo::Logger::clearSinks();
+    yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter()));
+
+    const auto success = log.find("testing") != std::string::npos;
+
+    if (!success) {
+        fprintf(stderr, "FAIL: testFileNoPattern()\n");
+        fprintf(stderr, "[%s]\n", log.c_str());
+    }
+
+    return success;
+}
 
 int main(const int /*argc*/, const char* const /*argv*/[]) {
     int failures = 0;
@@ -504,5 +552,7 @@ int main(const int /*argc*/, const char* const /*argv*/[]) {
     failures += testNoPadding() ? 0 : 1;
     failures += testThreading() ? 0 : 1;
     failures += testFormatGMT() ? 0 : 1;
+    failures += testFilePattern() ? 0 : 2;
+    failures += testFileNoPattern() ? 0 : 2;
     return failures;
 }
