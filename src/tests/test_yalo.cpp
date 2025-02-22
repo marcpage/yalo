@@ -21,7 +21,7 @@ public:
     virtual ~ThrowingSink()=default;
 };
 
-bool testLevel(yalo::Level level) {
+static bool testLevel(yalo::Level level) {
     yalo::Logger::clearSinks();
     yalo::Logger::setLevel(level);
     std::string log;
@@ -51,7 +51,7 @@ bool testLevel(yalo::Level level) {
 
 #define TEST_TYPE(type) testType<type>(#type)
 template<typename T>
-bool testType(const std::string& typeName) {
+static bool testType(const std::string& typeName) {
     yalo::Logger::clearSinks();
     yalo::Logger::setLevel(yalo::Log);
     std::string log;
@@ -73,7 +73,7 @@ bool testType(const std::string& typeName) {
     return success;
 }
 
-bool testPointer() {
+static bool testPointer() {
     yalo::Logger::clearSinks();
     yalo::Logger::setLevel(yalo::Log);
     std::string log;
@@ -95,7 +95,7 @@ bool testPointer() {
     return success;
 }
 
-bool testTraceIf() {
+static bool testTraceIf() {
     bool success = true;
 
     yalo::Logger::clearSinks();
@@ -120,7 +120,7 @@ bool testTraceIf() {
     return success;
 }
 
-bool testTraceWhile() {
+static bool testTraceWhile() {
     int increment = 0;
     yalo::Logger::clearSinks();
     yalo::Logger::setLevel(yalo::Trace);
@@ -147,7 +147,7 @@ bool testTraceWhile() {
 
 #define TEST_SWITCH(type) testSwitch<type>(#type)
 template<typename T>
-bool testSwitch(const std::string& typeName) {
+static bool testSwitch(const std::string& typeName) {
     bool success = true;
 
     yalo::Logger::clearSinks();
@@ -179,7 +179,7 @@ bool testSwitch(const std::string& typeName) {
     return success;
 }
 
-bool testBadLogFile() {
+static bool testBadLogFile() {
     bool success = true;
 
     yalo::Logger::clearSinks();
@@ -204,7 +204,7 @@ bool testBadLogFile() {
     return success;
 }
 
-bool testLogFile() {
+static bool testLogFile() {
     bool success = true;
     std::string contents;
 
@@ -243,7 +243,7 @@ bool testLogFile() {
     return success;
 }
 
-bool testException() {
+static bool testException() {
     yalo::Logger::clearSinks();
     yalo::Logger::setLevel(yalo::Log);
     std::string log;
@@ -269,7 +269,7 @@ bool testException() {
     return success;
 }
 
-bool testLoggerExcpetion() {
+static bool testLoggerExcpetion() {
     yalo::Logger::clearSinks();
     yalo::Logger::setLevel(yalo::Log);
     std::string log;
@@ -291,7 +291,7 @@ bool testLoggerExcpetion() {
     return success;
 }
 
-bool testPadding() {
+static bool testPadding() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterPad);
     yalo::Logger::setLevel(yalo::Log);
@@ -313,7 +313,7 @@ bool testPadding() {
     return success;
 }
 
-bool testNoPadding() {
+static bool testNoPadding() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterAsIs);
     yalo::Logger::setLevel(yalo::Log);
@@ -335,13 +335,13 @@ bool testNoPadding() {
     return success;
 }
 
-void thread_logging(int identifier) {
+static void thread_logging(int identifier) {
     for (int i = 0; i < 100; ++i) {
         lLog << "thread #" << identifier << " iteration #" << i;
     }
 }
 
-bool testThreading() {
+static bool testThreading() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterAsIs);
     yalo::Logger::setLevel(yalo::Log);
@@ -382,7 +382,7 @@ bool testThreading() {
     return success;
 }
 
-bool testFormatGMT() {
+static bool testFormatGMT() {
     yalo::Logger::clearSinks();
     yalo::Logger::setInserterSpacing(yalo::Logger::InserterAsIs);
     yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));

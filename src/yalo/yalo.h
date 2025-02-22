@@ -11,6 +11,7 @@
 #include <exception>
 #include <cerrno>
 #include <type_traits>
+#include <string.h>
 
 #define lLog yalo::Logger(yalo::Log, __FILE__, __LINE__, __func__)
 #define lErr yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__)
@@ -319,7 +320,8 @@ inline std::mutex& Logger::_mutex(Mutex mutexType) {
         case FormatterMutex:
             return formatterMutex;
         default:
-            throw std::invalid_argument("mutexType is invalid: " + std::to_string(mutexType));
+            throw std::invalid_argument("mutexType is invalid: " 
+                + std::to_string(static_cast<int>(mutexType)));
     }
 }
 
