@@ -1,3 +1,10 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# build output
+bin/
+
 # Prerequisites
 *.d
 
