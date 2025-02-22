@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <exception>
 #include <cerrno>
+#include <type_traits>
 
 #define lLog yalo::Logger(yalo::Log, __FILE__, __LINE__, __func__)
 #define lErr yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__)
@@ -66,15 +67,14 @@ public:
     template<typename T>
     T log_expression(const std::string& flow, const std::string& expression, T result);
     bool log_expression_bool(const std::string& flow, const std::string& expression, bool result);
+
+    template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+    Logger& operator<<(T value);
+    
     Logger& operator<<(const std::string& str);
     Logger& operator<<(const char* str);
-    Logger& operator<<(int value);
-    Logger& operator<<(unsigned int value);
-    Logger& operator<<(long value);
-    Logger& operator<<(unsigned long value);
-    Logger& operator<<(int64_t value);
-    Logger& operator<<(uint64_t value);
     Logger& operator<<(const void* ptr);
+    Logger& operator<<(float value);
     Logger& operator<<(double value);
     Logger& operator<<(const std::exception& exception);
 
@@ -225,10 +225,10 @@ inline Logger& Logger::log_line(const std::string& logLine) {
                 (*sink)->log(formatted_line);
                 ++sink;
         } catch (const std::exception& exception) {
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
             const auto loggerType = *sink ? typeid(**sink).name() : "";
-            #pragma clang diagnostic pop
+            #pragma GCC diagnostic pop
 
             failed_sinks.push_back(ExceptionLogger(_formatter()->format(exception), loggerType));
             sink = sinks.erase(sink);
@@ -267,6 +267,11 @@ inline bool Logger::log_expression_bool(const std::string& flow, const std::stri
     return result;
 }
 
+template<typename T, typename>
+inline Logger& Logger::operator<<(T value) {
+    return _append(std::to_string(value));
+}
+
 inline Logger& Logger::operator<<(const std::string& str) {
     return _append(str);
 }
@@ -275,35 +280,15 @@ inline Logger& Logger::operator<<(const char* str) {
     return _append(str);
 }
 
-inline Logger& Logger::operator<<(int value) {
-    return _append(std::to_string(value));
-}
-
-inline Logger& Logger::operator<<(unsigned int value) {
-    return _append(std::to_string(value));
-}
-
-inline Logger& Logger::operator<<(long value) {
-    return _append(std::to_string(value));
-}
-
-inline Logger& Logger::operator<<(unsigned long value) {
-    return _append(std::to_string(value));
-}
-
-inline Logger& Logger::operator<<(int64_t value) {
-    return _append(std::to_string(value));
-}
-
-inline Logger& Logger::operator<<(uint64_t value) {
-    return _append(std::to_string(value));
-}
-
 inline Logger& Logger::operator<<(const void* ptr) {
     std::ostringstream oss;
 
     oss << std::showbase << std::uppercase << std::hex << ptr;
     return _append(oss.str());
+}
+
+inline Logger& Logger::operator<<(float value) {
+    return (*this) << static_cast<double>(value);
 }
 
 inline Logger& Logger::operator<<(double value) {
@@ -316,7 +301,6 @@ inline Logger& Logger::operator<<(double value) {
 inline Logger& Logger::operator<<(const std::exception& exception) {
     return _append(_formatter()->format(exception));
 }
-
 
 inline std::mutex& Logger::_mutex(Mutex mutexType) {
     static std::mutex sinkList;
