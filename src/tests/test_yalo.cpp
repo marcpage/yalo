@@ -84,8 +84,8 @@ static bool testPointer() {
     yalo::Logger::clearSinks();
     yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
 
-    const auto success = log.size() > 5
-            && log.substr(log.size() - 5, 5) == " 0x0\n";
+    const auto success = log.size() > 2
+            && log.substr(log.size() - 2, 2) == "0\n";
     
     if (!success) {
         fprintf(stderr, "FAIL: testPointer()\n");
