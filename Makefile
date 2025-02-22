@@ -11,7 +11,7 @@ CPPFLAGS+=-fno-optimize-sibling-calls -fprofile-arcs -ftest-coverage -O0 -g
 CPPFLAGS+=-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined
 CPPFLAGS+=-fno-inline
 CPPFLAGS+=-Winit-self -Wold-style-cast -Woverloaded-virtual
-CPPFLAGS+=-Wsign-conversion -Wsign-promo
+CPPFLAGS+=-Wsign-conversion -Wno-sign-promo
 CPPFLAGS+=-Wstrict-overflow=5 -Wswitch-default -Wunused
 SOURCEDIR=src/tests
 OUTPUTDIR=bin
