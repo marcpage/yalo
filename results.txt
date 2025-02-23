@@ -1,0 +1,159 @@
+Apple clang version 16.0.0 (clang-1600.0.26.6)
+Target: arm64-apple-darwin24.3.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+Apple LLVM version 16.0.0
+   (clang-1600.0.26.6)Optimized build.
+
+src/tests/test_yalo.cpp -> bin/yalo/yalo
+
+_readFile('bin/testCommandFile.txt')
+bytesRead = 210 fileSize = 210 seekResult = 0
+eol = 0 line = '' eoc = -1 command = '' eoc < line.size() => false
+line = '' command = '' data = ''
+eol = 28 line = 'setFormatDefaultGMT' eoc = -1 command = '' eoc < line.size() => false
+line = 'setFormatDefaultGMT' command = '' data = ''
+eol = 53 line = 'setFormatDefault' eoc = -1 command = '' eoc < line.size() => false
+line = 'setFormatDefault' command = '' data = ''
+eol = 94 line = 'addSink: bin/testCommandFile.log' eoc = 7 command = 'addSink' eoc < line.size() => true
+line = 'addSink: bin/testCommandFile.log' command = 'addSink' data = 'bin/testCommandFile.log'
+eol = 119 line = 'resetLevels: Log' eoc = 11 command = 'resetLevels' eoc < line.size() => true
+line = 'resetLevels: Log' command = 'resetLevels' data = 'Log'
+eol = 131 line = 'pad' eoc = -1 command = '' eoc < line.size() => false
+line = 'pad' command = '' data = ''
+eol = 145 line = 'noPad' eoc = -1 command = '' eoc < line.size() => false
+line = 'noPad' command = '' data = ''
+eol = 168 line = 'setLevel:Error' eoc = 8 command = 'setLevel' eoc < line.size() => true
+line = 'setLevel:Error' command = 'setLevel' data = 'Error'
+eol = 205 line = 'setLevel:Debug=test_yalo.cpp' eoc = 8 command = 'setLevel' eoc < line.size() => true
+line = 'setLevel:Debug=test_yalo.cpp' command = 'setLevel' data = 'Debug=test_yalo.cpp'
+eol = -1 line = '' eoc = -1 command = '' eoc < line.size() => false
+line = '' command = '' data = ''
+Not time to check seconds = 0 interval = 10
+_readFile('bin/nonexistant/path/testCommandFile.txt')
+Unable to open file
+contents failure contents[0]
+{[2025-02-23 01:55:14.271 (Sun)][0][LOG] New Settings File: bin/testCommandFile.txt
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] Unknown command '': setFormatDefaultGMT
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] Unknown command '': setFormatDefault
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] Adding sink to bin/testCommandFile.log
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] resetLevels to 0
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] Unknown command '': pad
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] Unknown command '': noPad
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] Set level #1 pattern = ''
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] Set level #4 pattern = 'test_yalo.cpp'
+[2025-02-23 01:55:14.271 (Sun)][0][DBG][src/tests/test_yalo.cpp:507][testCommandFile] testing
+[2025-02-23 01:55:14.271 (Sun)][0][LOG] New Settings File: bin/nonexistant/path/testCommandFile.txt
+}
+Not time to check seconds = 0 interval = 10
+        -:  201:        If you set Error, "" then all files will be shown for Error or Log
+        -:  202:        Any levels higher than Error and have "" set, will be cleared.
+        -:  203:        To clear, the higher levels *must* match the pattern exactly
+        -:  231:        If the file has been set to the requested loggedLevel or higher,
+        -:  232:        it can be logged.
+        -:  266:    try {
+        -:  269:        // too late
+        -:  283:template<typename T>
+        -:  294:template<typename T, typename>
+        -:  337:        case ThreadListMutex:
+        -:  339:        case SinkListMutex:
+        -:  341:        case FormatterMutex:
+        -:  343:        case LevelsMutex:
+        -:  345:        case SettingsMutex:
+        -:  347:        default:
+    #####:  348:            throw std::invalid_argument("mutexType is invalid: " 
+    #####:  349:                + std::to_string(static_cast<int>(mutexType)));
+        -:  393:    typedef std::pair<std::string, std::string> ExceptionLogger;
+        -:  394:    typedef std::vector<ExceptionLogger> ExceptionList;
+    #####:  401:        sinks.push_back(std::unique_ptr<StdErrSink>(new StdErrSink()));
+        -:  405:        try {
+    #####:  420:        sinks.push_back(std::unique_ptr<StdErrSink>(new StdErrSink()));
+        -:  426:                try {
+        -:  431:                    // we tried
+        -:  450:    return formatter;
+        -:  458:    static InserterSpacing spacing=InserterPad;
+        -:  489:            // ignore empty lines
+    #####:  491:            Logger(Log)._logLineCore("Clearing Sinks");
+    #####:  492:            clearSinks();
+    #####:  494:            setFormat(std::unique_ptr<DefaultFormatter>(new DefaultFormatter()));
+    #####:  495:            Logger(Log)._logLineCore("Resetting format to default");
+    #####:  497:            setFormat(std::unique_ptr<DefaultFormatter>(new DefaultFormatter(DefaultFormatter::GMT)));
+    #####:  498:            Logger(Log)._logLineCore("Resetting format to default GMT");
+    #####:  500:            addSink(std::unique_ptr<StdErrSink>(new StdErrSink()));
+    #####:  501:            Logger(Log)._logLineCore("Adding stderr sink");
+    #####:  503:            addSink(std::unique_ptr<StdOutSink>(new StdOutSink()));
+    #####:  504:            Logger(Log)._logLineCore("Adding stdout sink");
+    #####:  510:                Logger(Log)._logLineCore("Failed to add sink: " + line);
+    #####:  516:            setInserterSpacing(InserterPad);
+    #####:  517:            Logger(Log)._logLineCore("Turned padding on");
+    #####:  519:            setInserterSpacing(InserterAsIs);
+    #####:  520:            Logger(Log)._logLineCore("Turned padding off");
+        -:  538:// static void setLevel(Level level, const std::string& pattern="");
+        -:  544:    static Timestamp lastCheck;
+        -:  545:    static int interval = 120;
+    #####:  606:        return Error;
+        -:  610:        case 'l':
+        -:  611:        case 'L':
+        -:  613:        case 'E':
+        -:  614:        case 'e':
+        -:  616:        case 'w':
+        -:  617:        case 'W':
+    #####:  618:            return Warning;
+        -:  619:        case 'i':
+        -:  620:        case 'I':
+    #####:  621:            return Info;
+        -:  622:        case 'd':
+        -:  623:        case 'D':
+        -:  625:        case 'v':
+        -:  626:        case 'V':
+    #####:  627:            return Verbose;
+        -:  628:        case 't':
+        -:  629:        case 'T':
+    #####:  630:            return Trace;
+        -:  631:        default:
+    #####:  632:            return Error;
+    #####:  644:        result.erase(result.size() - 1);
+        -:  652:        Rules:
+        -:  653:        1. No files matches a pattern of "-"
+        -:  654:        2. Any file matches an empty pattern (including an empty file)
+        -:  655:        3. All positive patterns are ORed and all negative patterns are ANDed
+        -:  657:        Example:
+        -:  658:        - "-" match nothing
+        -:  659:        - "" match everything
+        -:  660:        - "-bin/" match everything except files that contain "bin/"
+        -:  661:        - "src/;-src/include/" match everything that contains "src/" 
+        -:  662:                                unless it contains "src/include/"
+        -:  663:        - ".h;.cpp;-main.cpp;-test.cpp" match all files that have ".h" or ".cpp" in them
+        -:  664:                                            but don't match any that contain "main.cpp"
+        -:  665:                                                or "test.cpp"
+    #####:  671:        const auto end = pattern.find(';', start);
+    #####:  672:        const auto part = pattern.substr(start, end-start);
+    #####:  673:        const auto negative = part.find('-') == 0;
+    #####:  674:        const auto name = part.substr(negative ? 1 : 0);
+    #####:  675:        const auto matches = file.find(name) != std::string::npos;
+    #####:  677:        if (matches) {
+    #####:  678:            good = !negative;
+    #####:  681:        start = end < pattern.size() ? end + 1 : end;
+        -:  693:            // too late
+    #####:  704:        throw std::system_error(
+    #####:  705:            std::error_code(error, std::generic_category()),
+    #####:  706:            "Failed to log to '" + _name + "': " + ::strerror(error)
+    #####:  711:        throw std::runtime_error("Incomplete write to " + _name);
+    #####:  769:        throw RuntimeError("Unable to get time");
+        -:  775:                                    ? "%Y-%m-%d %H:%M:%S.MS (%a)"
+        -:  776:                                    : "%Y-%m-%d %H:%M:%S.MS %z (%a)",
+        -:  777:                                &now);
+    #####:  780:        throw RuntimeError("Unable to format time");
+        -:  789:        case Log:
+        -:  791:        case Error:
+        -:  793:        case Warning:
+        -:  795:        case Info:
+        -:  797:        case Debug:
+        -:  799:        case Verbose:
+        -:  801:        case Trace:
+        -:  803:        default:
+    #####:  804:            return "???";
+    #####:  818:        ms_str = '0' + ms_str;
+     380 bin/yalo_executable.txt
+     108 bin/yalo_unexecuted.txt
+     488 total

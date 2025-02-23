@@ -204,9 +204,25 @@ static bool testBadLogFile() {
     return success;
 }
 
+static std::string readFileContents(const std::string& path) {
+    FILE* file = ::fopen(path.c_str(), "r");
+    std::string contents;
+
+    if (nullptr == file) {
+        return "";
+    }
+
+    ::fseek(file, 0, SEEK_END);
+    const size_t fileSize = static_cast<size_t>(::ftell(file));
+    ::rewind(file);
+    contents.assign(fileSize, '\0');
+    const auto bytesRead = ::fread(&contents[0], 1, fileSize, file);
+    ::fclose(file);
+    return bytesRead == fileSize ? contents : std::string();
+}
+
 static bool testLogFile() {
     bool success = true;
-    std::string contents;
 
     yalo::Logger::clearSinks();
     yalo::Logger::resetLevels(yalo::Log);
@@ -219,20 +235,9 @@ static bool testLogFile() {
     yalo::Logger::clearSinks();
     yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
 
-    FILE* file = ::fopen("bin/testLogFile.txt", "r");
+    const auto contents = readFileContents("bin/testLogFile.txt");
 
-    success = nullptr != file;
-
-    if (success) {
-        ::fseek(file, 0, SEEK_END);
-        const size_t fileSize = static_cast<size_t>(::ftell(file));
-        ::rewind(file);
-        contents.assign(fileSize, '\0');
-        const auto bytesRead = ::fread(&contents[0], 1, fileSize, file);
-        ::fclose(file);
-        contents.erase(bytesRead);
-        success = log == contents;
-    }
+    success = !contents.empty() && log == contents;
 
     if (!success) {
         fprintf(stderr, "FAIL: testLogFile()\n");
@@ -455,6 +460,69 @@ static bool testFileNoPattern() {
     return success;
 }
 
+static bool createFile(const std::string& path, const std::string& contents) {
+    const auto file = ::fopen(path.c_str(), "w");
+
+    if (nullptr == file) {
+        return false;
+    }
+
+    const auto amount = ::fwrite(reinterpret_cast<const char *>(contents.c_str()), 1, contents.size(), file);
+    ::fclose(file);
+    return amount == contents.size();
+}
+
+/*
+        } else if (command == "clearSinks") {
+        } else if (command == "setFormatDefault") {
+        } else if (command == "setFormatDefaultGMT") {
+        } else if (command == "addSinkStdErr") {
+        } else if (command == "addSinkStdOut") {
+        } else if (command == "addSink") {
+        } else if (command == "resetLevels") {
+        } else if (command == "pad") {
+        } else if (command == "noPad") {
+        } else if (command == "setLevel") {
+*/
+static bool testCommandFile() {
+    const auto commands = R"(
+        setFormatDefaultGMT
+        setFormatDefault
+        addSink: bin/testCommandFile.log
+        resetLevels: Log
+        pad
+        noPad
+        setLevel:Error
+        setLevel:Debug=test_yalo.cpp
+    )";
+    bool success = createFile("bin/testCommandFile.txt", commands);
+
+    yalo::Logger::clearSinks();
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));
+    yalo::Logger::resetLevels(yalo::Log);
+    std::string log;
+    yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
+    yalo::Logger::setSettingsFile("bin/testCommandFile.txt");
+
+    lDebug << "testing";
+
+    yalo::Logger::setSettingsFile("bin/nonexistant/path/testCommandFile.txt");
+    yalo::Logger::clearSinks();
+    yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter()));
+
+    success = success && log.find("testing") != std::string::npos;
+
+    printf("{%s}\n", log.c_str());
+
+    if (!success) {
+        fprintf(stderr, "FAIL: testCommandFile()\n");
+        fprintf(stderr, "[%s]\n", log.c_str());
+    }
+
+    return success;
+}
+
 int main(const int /*argc*/, const char* const /*argv*/[]) {
     int failures = 0;
     enum TestEnum {One, Two, Three};
@@ -552,7 +620,8 @@ int main(const int /*argc*/, const char* const /*argv*/[]) {
     failures += testNoPadding() ? 0 : 1;
     failures += testThreading() ? 0 : 1;
     failures += testFormatGMT() ? 0 : 1;
-    failures += testFilePattern() ? 0 : 2;
-    failures += testFileNoPattern() ? 0 : 2;
+    failures += testFilePattern() ? 0 : 1;
+    failures += testFileNoPattern() ? 0 : 1;
+    failures += testCommandFile() ? 0 : 1;
     return failures;
 }

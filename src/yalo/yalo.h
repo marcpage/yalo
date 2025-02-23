@@ -111,6 +111,7 @@ private:
     static bool _fileMatches(const std::string& file, const std::string& pattern);
     static std::string _readFile(const std::string& path);
     static Level _fromString(const std::string &level);
+    static std::string _trim(const std::string &str);
     Logger& _append(const std::string& value);
     Logger& _logLineCore(const std::string& line);
 };
@@ -467,53 +468,71 @@ inline void Logger::_settingsFile(const std::string& newPath, int checkIntervalS
     std::string contents = _settingsContents(newPath, checkIntervalSeconds);
     size_t start = 0;
 
+    if (!newPath.empty()) {
+        Logger(Log)._logLineCore("New Settings File: " + newPath);
+    }
+
     if (contents.empty()) {
         return; // no need to process
     }
 
     while (start < contents.size()) {
         const auto eol = contents.find('\n', start);
-        const auto line = contents.substr(start, eol - start);
+        const auto line = _trim(contents.substr(start, eol - start));
         const auto eoc = line.find(':');
-        const auto command = eoc == std::string::npos ? std::string() : line.substr(0, eoc);
-        const auto data = line.substr(eoc < line.size() ? eoc + 1 : eoc);
+        const auto command = eoc == std::string::npos ? line : _trim(line.substr(0, eoc));
+        const auto data = eoc < line.size() ? _trim(line.substr(eoc + 1)) : std::string();
         
-        if (command == "clearSinks") {
+        if (line.empty()) {
+            // ignore empty lines
+        } else if (command == "clearSinks") {
+            Logger(Log)._logLineCore("Clearing Sinks");
             clearSinks();
         } else if (command == "setFormatDefault") {
             setFormat(std::unique_ptr<DefaultFormatter>(new DefaultFormatter()));
+            Logger(Log)._logLineCore("Resetting format to default");
+        } else if (command == "setFormatDefaultGMT") {
+            setFormat(std::unique_ptr<DefaultFormatter>(new DefaultFormatter(DefaultFormatter::GMT)));
+            Logger(Log)._logLineCore("Resetting format to default GMT");
         } else if (command == "addSinkStdErr") {
             addSink(std::unique_ptr<StdErrSink>(new StdErrSink()));
+            Logger(Log)._logLineCore("Adding stderr sink");
         } else if (command == "addSinkStdOut") {
             addSink(std::unique_ptr<StdOutSink>(new StdOutSink()));
+            Logger(Log)._logLineCore("Adding stdout sink");
         } else if (command == "addSink") {
-            auto path = data;
-
-            while (!path.empty() && std::isspace(path[0])) {
-                path.erase(0, 1);
-            }
-
-            while (!path.empty() && std::isspace(path[path.size() - 1])) {
-                path.erase(path.size() - 1);
-            }
-            
-            if (!path.empty()) {
-                addSink(std::unique_ptr<FileSink>(new FileSink(path)));
+            if (!data.empty()) {
+                try {
+                    addSink(std::unique_ptr<FileSink>(new FileSink(data)));
+                    Logger(Log)._logLineCore("Adding sink to " + data);
+                } catch(const std::exception& exception) {
+                    Logger(Log)._logLineCore("Error adding sink to " + data 
+                                                + ": " + exception.what());
+                }
+            } else {
+                Logger(Log)._logLineCore("Failed to add sink: " + line);
             }
         } else if (command == "resetLevels") {
             resetLevels(_fromString(data));
+            Logger(Log)._logLineCore("resetLevels to " + std::to_string(_fromString(data)));
         } else if (command == "pad") {
             setInserterSpacing(InserterPad);
+            Logger(Log)._logLineCore("Turned padding on");
         } else if (command == "noPad") {
             setInserterSpacing(InserterAsIs);
+            Logger(Log)._logLineCore("Turned padding off");
         } else if (command == "setLevel") {
             const auto equals = data.find('=');
             const auto level = _fromString(data.substr(0, equals));
-            const auto pattern = equals < data.size() ? data.substr(equals+1) : std::string();
+            const auto pattern = equals < data.size() 
+                                    ? _trim(data.substr(equals+1)) 
+                                    : std::string();
 
             setLevel(level, pattern);
+            Logger(Log)._logLineCore("Set level #" + std::to_string(level) 
+                                  + " pattern = '" + pattern + "'");
         } else {
-            printf("command = '%s' data = '%s'\n", command.c_str(), data.c_str());
+            Logger(Log)._logLineCore("Unknown command '" + command + "': " + line);
         }
 
         start = eol < contents.size() ? eol + 1 : eol;
@@ -612,6 +631,20 @@ inline Level Logger::_fromString(const std::string &level) {
         }
 }
 
+inline std::string Logger::_trim(const std::string &str) {
+    auto result = str;
+
+    while (!result.empty() && std::isspace(result[0])) {
+        result.erase(0, 1);
+    }
+
+    while (!result.empty() && std::isspace(result[result.size() - 1])) {
+        result.erase(result.size() - 1);
+    }
+
+    return result;
+}
+
 inline bool Logger::_fileMatches(const std::string& file, const std::string& pattern) {
     /*
         Rules:
@@ -708,8 +741,8 @@ inline std::string DefaultFormatter::format(const std::string& line, size_t thre
     return "[" + date(_location)
         + "][" + std::to_string(thread)
         + "][" + levelString(logger.levelRequested)
-        + "][" + logger.file + ":" + std::to_string(logger.line)
-        + "][" + logger.function
+        + (logger.file ? ("][" + std::string(logger.file) + ":" + std::to_string(logger.line)) : std::string())
+        + (logger.function ? ("][" + std::string(logger.function)) : std::string())
         + "] " + line + "\n";
 }
 
