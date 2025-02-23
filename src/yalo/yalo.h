@@ -58,6 +58,7 @@ public:
     static void addSink(ISinkPtr method);
     static void clearSinks();
     static void setFormat(IFormatterPtr formatter);
+    static void setSettingsFile(const std::string& path, int checkIntervalSeconds=10);
     static void setLevel(Level level, const std::string& pattern="");
     static void resetLevels(Level level);
     static bool shown(Level level, const std::string& file="");
@@ -70,8 +71,8 @@ public:
 
     Logger& log_line(const std::string& line);
     template<typename T>
-    T log_expression(const std::string& flow, const std::string& expression, T result);
-    bool log_expression_bool(const std::string& flow, const std::string& expression, bool result);
+    T logExpression(const std::string& flow, const std::string& expression, T result);
+    bool logExpressionBool(const std::string& flow, const std::string& expression, bool result);
 
     template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
     Logger& operator<<(T value);
@@ -87,6 +88,7 @@ public:
     typedef std::lock_guard<std::mutex> Lock;
     typedef std::vector<ISinkPtr> SinkList;
     typedef std::map<Level, std::string> FileLevels;
+    typedef std::chrono::system_clock::time_point Timestamp;
 
     const Level levelRequested;
     const char* file;
@@ -95,17 +97,22 @@ public:
 
 private:
     std::string _stream;
-    enum Mutex {ThreadListMutex, SinkListMutex, FormatterMutex, LevelsMutex};
+    enum Mutex {ThreadListMutex, SinkListMutex, FormatterMutex, LevelsMutex, SettingsMutex};
     enum Action {Change, NoChange};
     static std::mutex& _mutex(Mutex mutexType);
-    static size_t _thread_index();
-    static FileLevels& _levels_needs_lock(); // must Lock(_mutex(LevelsMutex))
-    static SinkList& _sinks_needs_lock(); // must Lock(_muetx(SinkListMutex))
+    static size_t _threadIndex();
+    static FileLevels& _levelsNeedsLock(); // must Lock(_mutex(LevelsMutex))
+    static SinkList& _sinksNeedsLock(); // must Lock(_muetx(SinkListMutex))
     static IFormatterPtr& _formatter(IFormatterPtr update);
     static IFormatterPtr& _formatter();
     static InserterSpacing _spacing(InserterSpacing spacing, Action action=Change);
-    static bool _file_matches(const std::string& file, const std::string& pattern);
+    static void _settingsFile(const std::string& path="", int checkIntervalSeconds=0);
+    static std::string _settingsContents(const std::string& path, int checkIntervalSeconds);
+    static bool _fileMatches(const std::string& file, const std::string& pattern);
+    static std::string _readFile(const std::string& path);
+    static Level _fromString(const std::string &level);
     Logger& _append(const std::string& value);
+    Logger& _logLineCore(const std::string& line);
 };
 
 class DefaultFormatter : public IFormatter {
@@ -170,18 +177,22 @@ inline void Logger::addSink(ISinkPtr method) {
     if (method) {
         Lock protection(_mutex(SinkListMutex));
 
-        _sinks_needs_lock().push_back(std::move(method));
+        _sinksNeedsLock().push_back(std::move(method));
     }
 }
 
 inline void Logger::clearSinks() {
     Lock protection(_mutex(SinkListMutex));
 
-    _sinks_needs_lock().clear();
+    _sinksNeedsLock().clear();
 }
 
 inline void Logger::setFormat(IFormatterPtr formatter) {
     _formatter(std::move(formatter));
+}
+
+inline void Logger::setSettingsFile(const std::string& path, int checkIntervalSeconds) {
+    _settingsFile(path, checkIntervalSeconds);
 }
 
 inline void Logger::setLevel(Level level, const std::string& pattern) {
@@ -191,7 +202,7 @@ inline void Logger::setLevel(Level level, const std::string& pattern) {
         To clear, the higher levels *must* match the pattern exactly
     */
     Lock lock(_mutex(LevelsMutex));
-    auto& levels = _levels_needs_lock();
+    auto& levels = _levelsNeedsLock();
     const auto start = static_cast<int>(level);
     const auto max = static_cast<int>(Trace);
 
@@ -208,7 +219,7 @@ inline void Logger::setLevel(Level level, const std::string& pattern) {
 
 inline void Logger::resetLevels(Level level) {
     Lock lock(_mutex(LevelsMutex));
-    auto& levels = _levels_needs_lock();
+    auto& levels = _levelsNeedsLock();
 
     levels.clear();
     levels[level] = "";
@@ -220,7 +231,7 @@ inline bool Logger::shown(Level loggedLevel, const std::string& file) {
         it can be logged.
     */
     Lock lock(_mutex(LevelsMutex));
-    auto& levels = _levels_needs_lock();
+    auto& levels = _levelsNeedsLock();
     const auto start = static_cast<int>(loggedLevel);
     const auto max = static_cast<int>(Trace);
 
@@ -232,7 +243,7 @@ inline bool Logger::shown(Level loggedLevel, const std::string& file) {
             continue; // nothing authorized for this level
         }
 
-        if (_file_matches(file, found->second)) {
+        if (_fileMatches(file, found->second)) {
             return true;
         }
     }
@@ -259,64 +270,22 @@ inline Logger::~Logger() {
 }
 
 inline Logger& Logger::log_line(const std::string& logLine) {
+    _settingsFile(); // check for dynamic changes
+
     if (!shown(levelRequested, file)) {
         return *this;
     }
 
-    typedef std::pair<std::string, std::string> ExceptionLogger;
-    typedef std::vector<ExceptionLogger> ExceptionList;
-    ExceptionList failed_sinks;
-    Lock lock(_mutex(SinkListMutex));
-    auto& sinks = _sinks_needs_lock();
-    const auto formatted_line = _formatter()->format(logLine, _thread_index(), *this);
-
-    if (sinks.empty()) {
-        sinks.push_back(std::unique_ptr<StdErrSink>(new StdErrSink()));
-    }
-
-    for (auto sink = sinks.begin(); sink != sinks.end(); ) {
-        try {
-                (*sink)->log(formatted_line);
-                ++sink;
-        } catch (const std::exception& exception) {
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
-            const auto loggerType = *sink ? typeid(**sink).name() : "";
-            #pragma GCC diagnostic pop
-
-            failed_sinks.push_back(ExceptionLogger(_formatter()->format(exception), loggerType));
-            sink = sinks.erase(sink);
-        }
-    }
-
-    if (sinks.empty()) {
-        sinks.push_back(std::unique_ptr<StdErrSink>(new StdErrSink()));
-    }
-
-    if (!failed_sinks.empty()) {
-        for (const auto& exceptionLogger : failed_sinks) {
-            for (auto& sink : sinks) {
-                try {
-                    sink->log(_formatter()->format("Logger[" + exceptionLogger.second + "]: " 
-                                                    + exceptionLogger.first, 
-                                                    _thread_index(), *this));
-                } catch(const std::exception&) {
-                    // we tried
-                }
-            }
-        }
-    }
-
-    return *this;
+    return _logLineCore(logLine);
 }
 
 template<typename T>
-inline T Logger::log_expression(const std::string& flow, const std::string& expression, T result) {
+inline T Logger::logExpression(const std::string& flow, const std::string& expression, T result) {
     log_line(flow + ": " + expression + " => " + std::to_string(result));
     return result;
 }
 
-inline bool Logger::log_expression_bool(const std::string& flow, const std::string& expression, bool result) {
+inline bool Logger::logExpressionBool(const std::string& flow, const std::string& expression, bool result) {
     log_line(flow + ": " + expression + " => " + (result ? "true" : "false"));
     return result;
 }
@@ -361,6 +330,7 @@ inline std::mutex& Logger::_mutex(Mutex mutexType) {
     static std::mutex threadList;
     static std::mutex formatterMutex;
     static std::mutex levelsMutex;
+    static std::mutex settingsMutex;
 
     switch(mutexType) {
         case ThreadListMutex:
@@ -371,13 +341,15 @@ inline std::mutex& Logger::_mutex(Mutex mutexType) {
             return formatterMutex;
         case LevelsMutex:
             return levelsMutex;
+        case SettingsMutex:
+            return settingsMutex;
         default:
             throw std::invalid_argument("mutexType is invalid: " 
                 + std::to_string(static_cast<int>(mutexType)));
     }
 }
 
-inline size_t Logger::_thread_index() {
+inline size_t Logger::_threadIndex() {
     static ThreadList threads;
     const auto this_thread = std::this_thread::get_id();
     Lock protection(_mutex(ThreadListMutex));
@@ -391,7 +363,7 @@ inline size_t Logger::_thread_index() {
     return static_cast<size_t>(found - threads.begin());
 }
 
-inline Logger::FileLevels& Logger::_levels_needs_lock() {
+inline Logger::FileLevels& Logger::_levelsNeedsLock() {
     static FileLevels levels;
 
     if (levels.size() == 0) {
@@ -401,7 +373,7 @@ inline Logger::FileLevels& Logger::_levels_needs_lock() {
     return levels;
 }
 
-inline Logger::SinkList& Logger::_sinks_needs_lock() {
+inline Logger::SinkList& Logger::_sinksNeedsLock() {
     static SinkList sinks;
 
     return sinks;
@@ -413,6 +385,54 @@ inline Logger& Logger::_append(const std::string& value) {
     }
 
     _stream += value;
+    return *this;
+}
+
+inline Logger& Logger::_logLineCore(const std::string& logLine) {
+    typedef std::pair<std::string, std::string> ExceptionLogger;
+    typedef std::vector<ExceptionLogger> ExceptionList;
+    ExceptionList failed_sinks;
+    Lock lock(_mutex(SinkListMutex));
+    auto& sinks = _sinksNeedsLock();
+    const auto formatted_line = _formatter()->format(logLine, _threadIndex(), *this);
+
+    if (sinks.empty()) {
+        sinks.push_back(std::unique_ptr<StdErrSink>(new StdErrSink()));
+    }
+
+    for (auto sink = sinks.begin(); sink != sinks.end(); ) {
+        try {
+            (*sink)->log(formatted_line);
+            ++sink;
+        } catch (const std::exception& exception) {
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
+            const auto loggerType = *sink ? typeid(**sink).name() : "";
+            #pragma GCC diagnostic pop
+
+            failed_sinks.push_back(ExceptionLogger(_formatter()->format(exception), loggerType));
+            sink = sinks.erase(sink);
+        }
+    }
+
+    if (sinks.empty()) {
+        sinks.push_back(std::unique_ptr<StdErrSink>(new StdErrSink()));
+    }
+
+    if (!failed_sinks.empty()) {
+        for (const auto& exceptionLogger : failed_sinks) {
+            for (auto& sink : sinks) {
+                try {
+                    sink->log(_formatter()->format("Logger[" + exceptionLogger.second + "]: " 
+                                                    + exceptionLogger.first, 
+                                                    _threadIndex(), *this));
+                } catch(const std::exception&) {
+                    // we tried
+                }
+            }
+        }
+    }
+
     return *this;
 }
 
@@ -443,7 +463,156 @@ inline Logger::InserterSpacing Logger::_spacing(InserterSpacing next, Action act
     return spacing;
 }
 
-inline bool Logger::_file_matches(const std::string& file, const std::string& pattern) {
+inline void Logger::_settingsFile(const std::string& newPath, int checkIntervalSeconds) {
+    std::string contents = _settingsContents(newPath, checkIntervalSeconds);
+    size_t start = 0;
+
+    if (contents.empty()) {
+        return; // no need to process
+    }
+
+    while (start < contents.size()) {
+        const auto eol = contents.find('\n', start);
+        const auto line = contents.substr(start, eol - start);
+        const auto eoc = line.find(':');
+        const auto command = eoc == std::string::npos ? std::string() : line.substr(0, eoc);
+        const auto data = line.substr(eoc < line.size() ? eoc + 1 : eoc);
+        
+        if (command == "clearSinks") {
+            clearSinks();
+        } else if (command == "setFormatDefault") {
+            setFormat(std::unique_ptr<DefaultFormatter>(new DefaultFormatter()));
+        } else if (command == "addSinkStdErr") {
+            addSink(std::unique_ptr<StdErrSink>(new StdErrSink()));
+        } else if (command == "addSinkStdOut") {
+            addSink(std::unique_ptr<StdOutSink>(new StdOutSink()));
+        } else if (command == "addSink") {
+            auto path = data;
+
+            while (!path.empty() && std::isspace(path[0])) {
+                path.erase(0, 1);
+            }
+
+            while (!path.empty() && std::isspace(path[path.size() - 1])) {
+                path.erase(path.size() - 1);
+            }
+            
+            if (!path.empty()) {
+                addSink(std::unique_ptr<FileSink>(new FileSink(path)));
+            }
+        } else if (command == "resetLevels") {
+            resetLevels(_fromString(data));
+        } else if (command == "pad") {
+            setInserterSpacing(InserterPad);
+        } else if (command == "noPad") {
+            setInserterSpacing(InserterAsIs);
+        } else if (command == "setLevel") {
+            const auto equals = data.find('=');
+            const auto level = _fromString(data.substr(0, equals));
+            const auto pattern = equals < data.size() ? data.substr(equals+1) : std::string();
+
+            setLevel(level, pattern);
+        } else {
+            printf("command = '%s' data = '%s'\n", command.c_str(), data.c_str());
+        }
+
+        start = eol < contents.size() ? eol + 1 : eol;
+    }
+}
+// static void setLevel(Level level, const std::string& pattern="");
+
+
+inline std::string Logger::_settingsContents(const std::string& newPath, int checkIntervalSeconds) {
+    static std::string path;
+    static std::string lastContents;
+    static Timestamp lastCheck;
+    static int interval = 120;
+
+    Lock protection(_mutex(SettingsMutex));
+    const auto pathChanged = !newPath.empty() && newPath != path;
+    
+    if (!newPath.empty()) {
+        path = newPath;
+        interval = checkIntervalSeconds;
+        lastCheck = pathChanged ? Timestamp() : lastCheck;
+    }
+
+    if (path.empty()) {
+        return ""; // no path to check
+    }
+
+    const auto now = std::chrono::system_clock::now();
+    const auto duration = now - lastCheck;
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+    const auto timeToCheck = seconds >= interval;
+
+    if (!timeToCheck) {
+        return "";
+    }
+
+    lastCheck = now;
+
+    const auto contents = _readFile(path);
+
+    if (contents.empty() || contents == lastContents) {
+        return ""; // doesn't exist, can't read it, or hasn't changed
+    }
+
+    lastContents = contents;
+    return contents;
+}
+
+inline std::string Logger::_readFile(const std::string& path) {
+    std::string buffer;
+
+    const auto file = ::fopen(path.c_str(), "r");
+
+    if (nullptr == file) {
+        return "";
+    }
+
+    ::fseek(file, 0, SEEK_END);
+    const size_t fileSize = static_cast<size_t>(::ftell(file));
+    ::rewind(file);
+    buffer.assign(fileSize, '\0');
+    const auto bytesRead = ::fread(&buffer[0], 1, fileSize, file);
+    ::fclose(file);
+    return bytesRead == fileSize ? buffer : std::string();
+}
+
+inline Level Logger::_fromString(const std::string &level) {
+    if (level.empty()) {
+        return Error;
+    }
+
+    switch(level[0]) {
+        case 'l':
+        case 'L':
+            return Log;
+        case 'E':
+        case 'e':
+            return Error;
+        case 'w':
+        case 'W':
+            return Warning;
+        case 'i':
+        case 'I':
+            return Info;
+        case 'd':
+        case 'D':
+            return Debug;
+        case 'v':
+        case 'V':
+            return Verbose;
+        case 't':
+        case 'T':
+            return Trace;
+        default:
+            return Error;
+        }
+}
+
+inline bool Logger::_fileMatches(const std::string& file, const std::string& pattern) {
     /*
         Rules:
         1. No files matches a pattern of "-"
@@ -473,6 +642,8 @@ inline bool Logger::_file_matches(const std::string& file, const std::string& pa
         if (matches) {
             good = !negative;
         }
+        
+        start = end < pattern.size() ? end + 1 : end;
     }
 
     return good;
@@ -630,7 +801,7 @@ inline std::string& DefaultFormatter::_replace(std::string& str, const std::stri
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wkeyword-macro"
-#define if(expression) if(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).log_expression_bool("if", #expression, expression))
-#define while(expression) while(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).log_expression_bool("while", #expression, expression))
-#define switch(expression) switch(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).log_expression("switch", #expression, expression))
+#define if(expression) if(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).logExpressionBool("if", #expression, expression))
+#define while(expression) while(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).logExpressionBool("while", #expression, expression))
+#define switch(expression) switch(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).logExpression("switch", #expression, expression))
 #pragma GCC diagnostic pop
