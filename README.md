@@ -5,6 +5,7 @@ Yet Another Logger C++ light-weight logging
 ## Features
 
 - Single header file, less than 1,000 lines of code
+- Supports C++11 and later
 - Supports Linux, macOS, and Windows
 - Threadsafe (and thread identification)
 - Minimal coding to log
