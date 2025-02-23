@@ -76,6 +76,9 @@ The log can output the following information:
 ## Changing log levels at Runtime
 
 In the code you can specify a path to a file to watch for logging settings.
+You can do this by calling `yalo::Logger::setSettingsFile({path}, {secondsBetweenChecks});`
+
+Here is an example of the file:
 
 ```
 setLevel: Error
@@ -83,6 +86,19 @@ setLevel: Trace=main.cpp
 addSinkStdErr
 addSink:debugging.txt
 ```
+
+You can have the following commands in the file:
+
+- [addSink](#addsink)
+- [addSinkStdErr](#addsinkstderr)
+- [addSinkStdOut](#addsinkstdout)
+- [clearSinks](#clearsinks)
+- [noPad](#nopad)
+- [pad](#pad)
+- [resetLevels](#resetlevels)
+- [setFormatDefault](#setformatdefault)
+- [setFormatDefaultGMT](#setformatdefaultgmt)
+- [setLevel](#setlevel) (globally and for specific files)
 
 ### addSink
 
