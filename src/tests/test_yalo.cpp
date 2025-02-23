@@ -472,18 +472,6 @@ static bool createFile(const std::string& path, const std::string& contents) {
     return amount == contents.size();
 }
 
-/*
-        } else if (command == "clearSinks") {
-        } else if (command == "setFormatDefault") {
-        } else if (command == "setFormatDefaultGMT") {
-        } else if (command == "addSinkStdErr") {
-        } else if (command == "addSinkStdOut") {
-        } else if (command == "addSink") {
-        } else if (command == "resetLevels") {
-        } else if (command == "pad") {
-        } else if (command == "noPad") {
-        } else if (command == "setLevel") {
-*/
 static bool testCommandFile() {
     const auto commands = R"(
         setFormatDefaultGMT
@@ -513,7 +501,34 @@ static bool testCommandFile() {
 
     success = success && log.find("testing") != std::string::npos;
 
-    printf("{%s}\n", log.c_str());
+    if (!success) {
+        fprintf(stderr, "FAIL: testCommandFile()\n");
+        fprintf(stderr, "[%s]\n", log.c_str());
+    }
+
+    return success;
+}
+
+static bool testConditionals() {
+    const auto value1 = 5;
+
+    yalo::Logger::clearSinks();
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));
+    yalo::Logger::resetLevels(yalo::Warning);
+    std::string log;
+    yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
+
+    lWarning(value1 > 2) << "too big";
+    lError(value1 < 10) << "too small";
+
+    yalo::Logger::clearSinks();
+    yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter()));
+
+    auto success = log.find("too big") != std::string::npos;
+    success = success && log.find("too small") != std::string::npos;
+    success = success && log.find("value1 > 2") != std::string::npos;
+    success = success && log.find("value1 < 10") != std::string::npos;
 
     if (!success) {
         fprintf(stderr, "FAIL: testCommandFile()\n");
@@ -623,5 +638,6 @@ int main(const int /*argc*/, const char* const /*argv*/[]) {
     failures += testFilePattern() ? 0 : 1;
     failures += testFileNoPattern() ? 0 : 1;
     failures += testCommandFile() ? 0 : 1;
+    failures += testConditionals() ? 0 : 1;
     return failures;
 }

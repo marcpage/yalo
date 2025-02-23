@@ -16,7 +16,9 @@
 
 #define lLog yalo::Logger(yalo::Log, __FILE__, __LINE__, __func__)
 #define lErr yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__)
+#define lError(condition) yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__, condition, #condition)
 #define lWarn yalo::Logger(yalo::Warning, __FILE__, __LINE__, __func__)
+#define lWarning(condition) yalo::Logger(yalo::Warning, __FILE__, __LINE__, __func__, condition, #condition)
 #define lInfo yalo::Logger(yalo::Info, __FILE__, __LINE__, __func__)
 #define lDebug yalo::Logger(yalo::Debug, __FILE__, __LINE__, __func__)
 #define lVerbose yalo::Logger(yalo::Verbose, __FILE__, __LINE__, __func__)
@@ -64,7 +66,7 @@ public:
     static bool shown(Level level, const std::string& file="");
     static void setInserterSpacing(InserterSpacing spacing);
 
-    Logger(Level level, const char* file=nullptr, const int line=0, const char* function=nullptr);
+    Logger(Level level, const char* file=nullptr, const int line=0, const char* function=nullptr, bool doLog=true, const char* condition=nullptr);
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
     ~Logger();
@@ -94,9 +96,11 @@ public:
     const char* file;
     const int line;
     const char* function;
+    const char* condition;
 
 private:
     std::string _stream;
+    const bool _doLog;
     enum Mutex {ThreadListMutex, SinkListMutex, FormatterMutex, LevelsMutex, SettingsMutex};
     enum Action {Change, NoChange};
     static std::mutex& _mutex(Mutex mutexType);
@@ -255,11 +259,11 @@ inline void Logger::setInserterSpacing(InserterSpacing spacing) {
     _spacing(spacing);
 }
 
-inline Logger::Logger(Level level, const char* fl, const int ln, const char* func)
-    :levelRequested(level), file(fl), line(ln), function(func), _stream() {}
+inline Logger::Logger(Level level, const char* fl, const int ln, const char* func, bool doLog, const char* cond)
+    :levelRequested(level), file(fl), line(ln), function(func), condition(cond), _stream(), _doLog(doLog) {}
 
 inline Logger::~Logger() {
-    if (_stream.empty()) {
+    if (!_doLog || _stream.empty()) {
         return;
     }
 
@@ -743,6 +747,7 @@ inline std::string DefaultFormatter::format(const std::string& line, size_t thre
         + "][" + levelString(logger.levelRequested)
         + (logger.file ? ("][" + std::string(logger.file) + ":" + std::to_string(logger.line)) : std::string())
         + (logger.function ? ("][" + std::string(logger.function)) : std::string())
+        + (logger.condition ? ("][" + std::string(logger.condition)) : std::string())
         + "] " + line + "\n";
 }
 
