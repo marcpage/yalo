@@ -509,6 +509,89 @@ static bool testCommandFile() {
     return success;
 }
 
+static bool testCommandFileCreated() {
+    const auto commands = R"(
+        setFormatDefaultGMT
+        setFormatDefault
+        addSink: bin/testCommandFileCreated.log
+        resetLevels: Log
+        pad
+        noPad
+        setLevel:Error
+        setLevel:Debug=test_yalo.cpp
+    )";
+
+    yalo::Logger::clearSinks();
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));
+    yalo::Logger::resetLevels(yalo::Log);
+    std::string log;
+    yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
+    yalo::Logger::setSettingsFile("bin/testCommandFileCreated.txt", 0);
+    bool success = createFile("bin/testCommandFileCreated.txt", commands);
+
+    lDebug << "testing";
+
+    yalo::Logger::setSettingsFile("bin/nonexistant/path/testCommandFileCreated.txt");
+    yalo::Logger::clearSinks();
+    yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter()));
+
+    success = success && log.find("testing") != std::string::npos;
+
+    if (!success) {
+        fprintf(stderr, "FAIL: testCommandFileCreated()\n");
+        fprintf(stderr, "[%s]\n", log.c_str());
+    }
+
+    return success;
+}
+
+static bool testCommandFileUpdated() {
+    const auto commands = R"(
+        setFormatDefaultGMT
+        setFormatDefault
+        addSink: bin/testCommandFileUpdated.log
+        resetLevels: Log
+        pad
+        noPad
+        setLevel:Error
+        setLevel:Debug=test_yalo.cpp
+    )";
+    const auto newCommands = R"(
+        setFormatDefaultGMT
+        addSink: bin/testCommandFileUpdated.log
+        resetLevels: Log
+        pad
+        setLevel:Log
+        setLevel:Debug=test_yalo.cpp
+    )";
+
+    yalo::Logger::clearSinks();
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter(yalo::DefaultFormatter::GMT)));
+    yalo::Logger::resetLevels(yalo::Log);
+    std::string log;
+    yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
+    bool success = createFile("bin/testCommandFileUpdated.txt", commands);
+    yalo::Logger::setSettingsFile("bin/testCommandFileUpdated.txt", 0);
+    success = success && createFile("bin/testCommandFileUpdated.txt", newCommands);
+
+    lDebug << "testing";
+
+    yalo::Logger::setSettingsFile("bin/nonexistant/path/testCommandFileUpdated.txt");
+    yalo::Logger::clearSinks();
+    yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
+    yalo::Logger::setFormat(std::unique_ptr<yalo::DefaultFormatter>(new yalo::DefaultFormatter()));
+
+    success = success && log.find("testing") != std::string::npos;
+
+    if (!success) {
+        fprintf(stderr, "testCommandFileUpdated()\n");
+        fprintf(stderr, "[%s]\n", log.c_str());
+    }
+
+    return success;
+}
+
 static bool testConditionals() {
     const auto value1 = 5;
 
@@ -531,7 +614,7 @@ static bool testConditionals() {
     success = success && log.find("value1 < 10") != std::string::npos;
 
     if (!success) {
-        fprintf(stderr, "FAIL: testCommandFile()\n");
+        fprintf(stderr, "FAIL: testConditionals()\n");
         fprintf(stderr, "[%s]\n", log.c_str());
     }
 
@@ -638,6 +721,8 @@ int main(const int /*argc*/, const char* const /*argv*/[]) {
     failures += testFilePattern() ? 0 : 1;
     failures += testFileNoPattern() ? 0 : 1;
     failures += testCommandFile() ? 0 : 1;
+    failures += testCommandFileCreated() ? 0 : 1;
+    failures += testCommandFileUpdated() ? 0 : 1;
     failures += testConditionals() ? 0 : 1;
     return failures;
 }
