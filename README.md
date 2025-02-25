@@ -1,6 +1,16 @@
 # yalo
 
-Yet Another Logger C++ light-weight logging
+![status sheild](https://img.shields.io/static/v1?label=test+coverage&message=87%&color=active&style=plastic)
+![GitHub](https://img.shields.io/github/license/marcpage/yalo?style=plastic)
+[![commit sheild](https://img.shields.io/github/last-commit/marcpage/yalo?style=plastic)](https://github.com/marcpage/yalo/commits)
+[![activity sheild](https://img.shields.io/github/commit-activity/m/marcpage/yalo?style=plastic)](https://github.com/marcpage/yalo/commits)
+![GitHub top language](https://img.shields.io/github/languages/top/marcpage/yalo?style=plastic)
+[![size sheild](https://img.shields.io/github/languages/code-size/marcpage/yalo?style=plastic)](https://github.com/marcpage/yalo)
+[![issues sheild](https://img.shields.io/github/issues-raw/marcpage/yalo?style=plastic)](https://github.com/marcpage/yalo/issues)
+[![follow sheild](https://img.shields.io/github/followers/marcpage?label=Follow&style=social)](https://github.com/marcpage?tab=followers)
+[![watch sheild](https://img.shields.io/github/watchers/marcpage/yalo?label=Watch&style=social)](https://github.com/marcpage/yalo/watchers)
+
+Yet Another Logger: C++ light-weight logger
 
 ## Features
 
@@ -10,9 +20,9 @@ Yet Another Logger C++ light-weight logging
 - Threadsafe (and thread identification)
 - Minimal coding to log
 - Logs timestamp, thread, [level](#logging-levels), file, line number, function, condition
-- Can log to `stdout`, `stderr`, and/or files
-- Can write custom code to log to other destinations
-- Can write custom code to change the format of the logging output
+- Logs to `stdout`, `stderr`, and/or files
+- Customize to log to other destinations
+- Customize to change the format of the logging output
 - Can create/update a [file to change logging settings while code is running](#changing-log-levels-at-runtime)
 - Can automaticaly log all `if`, `while`, and `switch` statements in `Trace` mode
 - Can [set logging level per file or group of files](#setlevel)
@@ -20,16 +30,26 @@ Yet Another Logger C++ light-weight logging
 
 ## Logging Levels
 
-```C++
-yalo::Fatal    // Log and call abort()
-yalo::Log      // (almost) Always log
-yalo::Error    // Log errors (default) - likely problems
-yalo::Warning  // Log warnings - probably not see problems
-yalo::Info     // Log information - general information
-yalo::Debug    // Log debug - information to help with debugging
-yalo::Verbose  // Log verbose - more info than necessary
-yalo::Trace    // Log trace - log every if, switch, and while
-```
+| Constant | Call | Description |
+|---|---|---|
+| yalo::Fatal | lFatal | Always log and call abort() |
+| yalo::Fatal | lFatalIf(condition) | If condition is true, log and call abort() |
+| yalo::Log | lLog | Information that should always be in the log (version, settings, etc) |
+| yalo::Error | lError | An error occurred (default logging level) |
+| yalo::Error | lErrorIf(condition) | `condition` is the error condition and will log if true(default logging level) |
+| yalo::Warning | lWarn | Warn about potential problems |
+| yalo::Warning | lWarnIf(condition) | `condition` is a potential problem if true |
+| yalo::Info | lInfo | Log general information |
+| yalo::Debug | lDebug | Log information helpful for debugging |
+| yalo::Verbose | lVerbose | Log an excessive amount of information for deeper debugging |
+| yalo::Trace | lTrace | Log execution, including every `if`, `while`, and `switch` |
+
+### Trace if, while, and switch
+
+By default, every `if`, `while`, and `switch` will be available in `yalo::Trace` mode.
+This adds a small amount of code to every `if`, `while` iteration, and `switch`.
+While this code is small, it may have a performance impact.
+To disable this tracing ability, you can define `DISABLE_YALO_TRACE`.
 
 ### Example logging code
 
