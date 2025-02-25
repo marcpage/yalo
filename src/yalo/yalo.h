@@ -845,9 +845,11 @@ inline std::string& DefaultFormatter::_replace(std::string& str, const std::stri
 
 }
 
+#ifndef DISABLE_YALO_TRACE
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wkeyword-macro"
 #define if(expression) if(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).logExpressionBool("if", #expression, expression))
 #define while(expression) while(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).logExpressionBool("while", #expression, expression))
 #define switch(expression) switch(yalo::Logger(yalo::Trace, __FILE__, __LINE__, __func__).logExpression("switch", #expression, expression))
 #pragma GCC diagnostic pop
+#endif
