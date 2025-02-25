@@ -601,8 +601,8 @@ static bool testConditionals() {
     std::string log;
     yalo::Logger::addSink(std::unique_ptr<DebugSink>(new DebugSink(log)));
 
-    lWarning(value1 > 2) << "too big";
-    lError(value1 < 10) << "too small";
+    lWarnIf(value1 > 2) << "too big";
+    lErrIf(value1 < 10) << "too small";
 
     yalo::Logger::clearSinks();
     yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));

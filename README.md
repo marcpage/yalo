@@ -16,6 +16,7 @@ Yet Another Logger C++ light-weight logging
 - Can create/update a [file to change logging settings while code is running](#changing-log-levels-at-runtime)
 - Can automaticaly log all `if`, `while`, and `switch` statements in `Trace` mode
 - Can [set logging level per file or group of files](#setlevel)
+- Over 80% unit test code coverage
 
 ## Logging Levels
 
@@ -34,9 +35,9 @@ yalo::Trace = 6;    // Log trace - log every if, switch, and while
 ```C++
     lLog << "Program version" << version_string;
     lErr << "We're all going to die!";
-    lError(file == nullptr) << "crash eminent!";
+    lErrIf(file == nullptr) << "crash eminent!";
     lWarn << "Warning!";
-    lWarning(size > 5) << "We should work but this is kind of big" << size;
+    lWarnIf(size > 5) << "We should work but this is kind of big" << size;
     lInfo << "How did we get here?";
     lDebug << "iteration #" << iteration << "size = " << size;
     lVerbose << "Checking if we should move forward";

@@ -17,9 +17,9 @@
 #define lFatal yalo::Logger(yalo::Fatal, __FILE__, __LINE__, __func__)
 #define lLog yalo::Logger(yalo::Log, __FILE__, __LINE__, __func__)
 #define lErr yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__)
-#define lError(condition) yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__, condition, #condition)
+#define lErrIf(condition) yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__, condition, #condition)
 #define lWarn yalo::Logger(yalo::Warning, __FILE__, __LINE__, __func__)
-#define lWarning(condition) yalo::Logger(yalo::Warning, __FILE__, __LINE__, __func__, condition, #condition)
+#define lWarnIf(condition) yalo::Logger(yalo::Warning, __FILE__, __LINE__, __func__, condition, #condition)
 #define lInfo yalo::Logger(yalo::Info, __FILE__, __LINE__, __func__)
 #define lDebug yalo::Logger(yalo::Debug, __FILE__, __LINE__, __func__)
 #define lVerbose yalo::Logger(yalo::Verbose, __FILE__, __LINE__, __func__)
@@ -548,8 +548,6 @@ inline void Logger::_settingsFile(const std::string& newPath, int checkIntervalS
         start = eol < contents.size() ? eol + 1 : eol;
     }
 }
-// static void setLevel(Level level, const std::string& pattern="");
-
 
 inline std::string Logger::_settingsContents(const std::string& newPath, int checkIntervalSeconds) {
     static std::string path;
