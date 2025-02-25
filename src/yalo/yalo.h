@@ -276,7 +276,7 @@ inline Logger::~Logger() {
         // too late
     }
 
-    if (levelRequested == Fatal) {
+    if (_doLog && levelRequested == Fatal) {
         ::abort();
     }
 }
