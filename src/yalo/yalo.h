@@ -14,6 +14,7 @@
 #include <string.h>
 #include <map>
 
+#define lFatal yalo::Logger(yalo::Fatal, __FILE__, __LINE__, __func__)
 #define lLog yalo::Logger(yalo::Log, __FILE__, __LINE__, __func__)
 #define lErr yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__)
 #define lError(condition) yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__, condition, #condition)
@@ -27,13 +28,14 @@
 namespace yalo {
 
 enum Level {
-    Log = 0,
-    Error = 1,
-    Warning = 2,
-    Info = 3,
-    Debug = 4,
-    Verbose = 5,
-    Trace = 6,
+    Fatal = 0,
+    Log = 1,
+    Error = 2,
+    Warning = 3,
+    Info = 4,
+    Debug = 5,
+    Verbose = 6,
+    Trace = 7,
 };
 
 class ISink {
@@ -263,7 +265,7 @@ inline Logger::Logger(Level level, const char* fl, const int ln, const char* fun
     :levelRequested(level), file(fl), line(ln), function(func), condition(cond), _stream(), _doLog(doLog) {}
 
 inline Logger::~Logger() {
-    if (!_doLog || _stream.empty()) {
+    if (levelRequested != Fatal && (!_doLog || _stream.empty())) {
         return;
     }
 
@@ -271,6 +273,10 @@ inline Logger::~Logger() {
         log_line(_stream);
     } catch(...) {
         // too late
+    }
+
+    if (levelRequested == Fatal) {
+        ::abort();
     }
 }
 
@@ -789,6 +795,8 @@ inline std::string DefaultFormatter::date(Location location) {
 
 inline std::string DefaultFormatter::levelString(Level level) {
     switch(level) {
+        case Fatal:
+            return "FTL";
         case Log:
             return "LOG";
         case Error:

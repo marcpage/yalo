@@ -39,7 +39,7 @@ static bool testLevel(yalo::Level level) {
     yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
     
     const auto lines = std::count(log.begin(), log.end(), '\n');
-    const auto success = lines == static_cast<int>(level) + 1;
+    const auto success = lines == static_cast<int>(level);
 
     if (!success) {
         fprintf(stderr, "FAIL: testLevel(%d) => lines = %d\n", level, static_cast<int>(lines));
@@ -630,8 +630,8 @@ int main(const int /*argc*/, const char* const /*argv*/[]) {
     yalo::Logger::clearSinks();
     yalo::Logger::addSink(std::unique_ptr<NullSink>(new NullSink()));
 
-    for (auto level = yalo::Log; level <= yalo::Trace; level=static_cast<yalo::Level>(static_cast<int>(level) + 1)) {
-        if (!testLevel(level)) {
+    for (int level = 0; level <= static_cast<int>(yalo::Trace); ++level) {
+        if (!testLevel(static_cast<yalo::Level>(level))) {
             failures += 1;
         }
     }
