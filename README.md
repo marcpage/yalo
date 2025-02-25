@@ -21,13 +21,14 @@ Yet Another Logger C++ light-weight logging
 ## Logging Levels
 
 ```C++
-yalo::Log = 0;      // Always log
-yalo::Error = 1;    // Log errors (default) - likely problems
-yalo::Warning = 2;  // Log warnings - probably not see problems
-yalo::Info = 3;     // Log information - general information
-yalo::Debug = 4;    // Log debug - information to help with debugging
-yalo::Verbose = 5;  // Log verbose - more info than necessary
-yalo::Trace = 6;    // Log trace - log every if, switch, and while
+yalo::Fatal    // Log and call abort()
+yalo::Log      // (almost) Always log
+yalo::Error    // Log errors (default) - likely problems
+yalo::Warning  // Log warnings - probably not see problems
+yalo::Info     // Log information - general information
+yalo::Debug    // Log debug - information to help with debugging
+yalo::Verbose  // Log verbose - more info than necessary
+yalo::Trace    // Log trace - log every if, switch, and while
 ```
 
 ### Example logging code

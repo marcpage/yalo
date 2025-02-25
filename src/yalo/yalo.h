@@ -15,6 +15,7 @@
 #include <map>
 
 #define lFatal yalo::Logger(yalo::Fatal, __FILE__, __LINE__, __func__)
+#define lFatalIf(condition) yalo::Logger(yalo::Fatal, __FILE__, __LINE__, __func__, condition, #condition)
 #define lLog yalo::Logger(yalo::Log, __FILE__, __LINE__, __func__)
 #define lErr yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__)
 #define lErrIf(condition) yalo::Logger(yalo::Error, __FILE__, __LINE__, __func__, condition, #condition)
