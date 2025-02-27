@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <string.h>
 #include <map>
+#include <syslog.h>
 
 #define lFatal yalo::Logger(yalo::Fatal, __FILE__, __LINE__, __func__)
 #define lFatalIf(condition) yalo::Logger(yalo::Fatal, __FILE__, __LINE__, __func__, condition, #condition)
@@ -179,6 +180,14 @@ public:
 
 private:
     static FILE* _open(const std::string& path);
+};
+
+class SyslogSink : public ISink {
+public:
+SyslogSink()=default;
+    virtual ~SyslogSink()=default;
+
+    virtual void log(const std::string& line) override;
 };
     
 inline void Logger::addSink(ISinkPtr method) {
@@ -741,6 +750,10 @@ inline FILE* FileSink::_open(const std::string& path) {
     }
 
     return opened;
+}
+
+inline void SyslogSink::log(const std::string& line) {
+    syslog(LOG_NOTICE, "%s", line.c_str());
 }
 
 inline DefaultFormatter::DefaultFormatter(Location location)
