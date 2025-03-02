@@ -1,5 +1,5 @@
 CXX=g++
-CPPFLAGS=-std=c++14 -Wall -Weffc++ -Wextra -Wshadow -Wwrite-strings -Werror -Wno-pragmas
+CPPFLAGS=-std=c++11 -Wall -Weffc++ -Wextra -Wshadow -Wwrite-strings -Werror -Wno-pragmas
 CPPFLAGS+=-Wpedantic -pedantic-errors -Wdisabled-optimization
 CPPFLAGS+=-Wcast-align -Wcast-qual
 CPPFLAGS+=-Wfloat-equal -Wformat=2
