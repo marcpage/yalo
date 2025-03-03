@@ -1,3 +1,13 @@
+/*
+
+This is free and unencumbered software released into the public domain.
+
+This software is provided "as is", without warranty of any kind.
+If it doesn't suit your application, feel free to change it to perform as you wish.
+If you feel generous, you can submit your changes back to the original work.
+
+*/
+
 #pragma once
 
 #include <vector>
